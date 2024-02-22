@@ -1,0 +1,229 @@
+---
+
+# =========================================================
+#       PLAY -- Check variables exist
+# ---------------------------------------------------------
+
+- name: Ensure playbook has proper variables
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+
+  - fail:
+      msg: "variable {{item}} not defined"
+    when: item not in vars
+    loop:
+      - deployment_environment
+      - pod_number
+
+  - fail:
+      msg: "`deployment_type` required for deployment_environment {{ deployment_environment }}"
+    when: 
+      - "'deployment_type' not in vars"
+      - deployment_environment == "vcenter"
+
+
+# =========================================================
+#       PLAY -- Deploy Instances or VMs
+# ---------------------------------------------------------
+- name: Deploy Siwapp workloads (instances or VMs)
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    
+  tasks:
+  - name: include aws role
+    include_role:
+      name: aws
+    when: deployment_environment == "aws"
+  - name: include vcenter role
+    include_role:
+      name: vcenter
+    when: deployment_environment == "vcenter"
+
+# # =========================================================
+# #       PLAY -- Read in global variables
+# # ---------------------------------------------------------
+
+- name: Include deployment information
+  hosts: all
+  gather_facts: False
+  
+  tasks:
+  - name: Read DNS and IP information for all hosts
+    include_vars: deployment.yml
+
+  - name: Set remote user for AWS
+    set_fact:
+      remote_user: ec2-user
+    when: deployment_environment == "aws"
+
+  - name: Set remote user for vCenter
+    set_fact:
+      # remote_user: siwapp
+      remote_user: ansible      
+    when: deployment_environment == "vcenter"
+
+  - name: Display DNS and IP information for all hosts
+    debug: 
+      var: siwapp_deployment
+      verbosity: 2
+
+
+# =========================================================
+#       PLAY -- Wait for machines to be available
+# ---------------------------------------------------------
+
+# ensure all VMs are accessible before proceding with the rest
+# of the configuration
+- name: Pause for instances to be ready for configuration
+  hosts: siwappall
+  # remote_user: "{{ remote_user if deployment_environment == 'aws' else ansible_user }}"
+  remote_user: ansible
+  become: no
+  gather_facts: no
+
+  tasks:
+  - name: Pause for instances to be ready for configuration
+    wait_for_connection:
+      sleep: 5
+      timeout: 300 
+
+# =========================================================
+#       PLAY -- Perform actions on all instances
+# ---------------------------------------------------------
+
+- name: Perform actions on all instances
+  hosts: siwappall
+  # remote_user: "{{ remote_user if deployment_environment == 'aws' else ansible_user }}"
+  remote_user: ansible
+#  become: yes
+#  become_method: sudo
+  gather_facts: True
+
+  pre_tasks:
+  - name: Pause for all instances to be ready for configuration
+    wait_for_connection:
+      sleep: 5
+      timeout: 300
+
+  tasks:
+  - name: include local_user role
+    include_role:
+      name: local_user
+    when: deployment_environment == "vcenter"
+  - name: include common
+    include_role:
+      name: common
+
+# =========================================================
+#       PLAY -- Configure database tier
+# ---------------------------------------------------------
+
+- name: Configure instances in database tier
+  hosts: siwappdatabase
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  gather_facts: True
+
+  pre_tasks:
+  - name: Pause for all instances to be ready for configuration
+    wait_for_connection:
+      sleep: 5
+      timeout: 300
+    
+  roles:
+  - siwapp_db
+  # - {role: tetration_sensor, when: tet_sensor_db}
+
+# =========================================================
+#       PLAY -- Configure HA proxy for the database tier
+# ---------------------------------------------------------
+
+- name: Configure instances in haproxy for database tier
+  hosts: siwapphaproxydb
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  gather_facts: False
+
+  pre_tasks:
+  - name: Pause for all instances to be ready for configuration
+    wait_for_connection:
+      sleep: 5
+      timeout: 300
+
+  roles:
+  - siwapp_haproxy_db
+  # - {role: tetration_sensor, when: tet_sensor_haproxydb}
+
+
+# =========================================================
+#       PLAY -- Configure application tier
+# ---------------------------------------------------------
+
+- name: Configure instances in application tier
+  hosts: siwappapplication
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  # need to gather facts for this play so we can pass
+  # hostname into one of the role tasks
+  gather_facts: True
+  
+  pre_tasks:
+  - name: Pause for all instances to be ready for configuration
+    wait_for_connection:
+      sleep: 5
+      timeout: 300
+
+  roles:
+  - siwapp_app
+  # - {role: tetration_sensor, when: tet_sensor_application}
+
+# =========================================================
+#       PLAY -- Configure HA proxy for the application tier
+# ---------------------------------------------------------
+
+- name: Configure instances in haproxy for application tier
+  hosts: siwapphaproxyapp
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  gather_facts: False
+
+  pre_tasks:
+  - name: Pause for all instances to be ready for configuration
+    wait_for_connection:
+      sleep: 5
+      timeout: 300
+
+  roles:
+  - siwapp_haproxy_app
+  # - {role: tetration_sensor, when: tet_sensor_haproxyapp}
+
+# =========================================================
+#       PLAY -- Configure load simulator
+# ---------------------------------------------------------
+
+- name: Configure load simulator instance
+  hosts: siwapploadsim
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  gather_facts: False
+
+  pre_tasks:
+  - name: Pause for all instances to be ready for configuration
+    wait_for_connection:
+      sleep: 5
+      timeout: 300
+
+  roles:
+  - siwapp_load_simulator
+  # - {role: tetration_sensor, when: tet_sensor_loadsim}

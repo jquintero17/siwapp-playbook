@@ -1,0 +1,16 @@
+127.0.0.1   {{ ansible_hostname }}
+{% for vm in siwapp_deployment.loadsim %}
+{{ vm.ip }}     {{ vm.name }}
+{% endfor %}
+{% for vm in siwapp_deployment.haproxy_app %}
+{{ vm.ip }}     {{ vm.name }}
+{% endfor %}
+{% for vm in siwapp_deployment.app %}
+{{ vm.ip }}     {{ vm.name }}
+{% endfor %}
+{% for vm in siwapp_deployment.db %}
+{{ vm.ip }}     {{ vm.name }}
+{% endfor %}
+{% for vm in siwapp_deployment.haproxy_db %}
+{{ vm.ip }}     {{ vm.name }}
+{% endfor %}

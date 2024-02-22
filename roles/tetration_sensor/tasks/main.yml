@@ -1,0 +1,38 @@
+
+# Role will install the Tetration sensor.
+# 1. Install prerequisites
+# 2. Copy RPM file from the files directory
+# 3. yum install tetration sensor
+# 4. Remove the RPM file from /tmp
+
+
+- name: Install prerequisites for Tetration sensor
+  yum:
+    name: ipset, redhat-lsb-core
+    state: latest
+
+- name: Copy tetration RPM file
+  copy:
+    src: "{{ item }}"
+    dest: /tmp/
+  with_fileglob: "*.rpm"
+  register: filename
+
+- name: Install Tetration sensor
+  yum:
+    name: "{{ item.dest }}"
+    state: present
+  loop: "{{ filename.results }}"
+  when: filename.changed
+
+- name: Remove the RPM from /tmp
+  file:
+    path: "/tmp/{{item.dest}}"
+    state: absent
+  loop: "{{ filename.results }}"
+  when: filename.changed
+
+# - shell: netstat -alnp | grep tet
+#   register: shellresult
+
+# - debug: var=shellresult

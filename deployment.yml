@@ -1,0 +1,24 @@
+siwapp_deployment:
+  loadsim:
+    - name: prod-siwapp-load-simulator-1
+      ip: 192.168.56.7
+  haproxy_app:
+    - name: prod-siwapp-haproxy-app-1
+      ip: 192.168.54.6
+  app:
+    - name: prod-siwapp-app-1
+      ip: 192.168.52.10
+    - name: prod-siwapp-app-2
+      ip: 192.168.52.11
+    - name: prod-siwapp-app-3
+      ip: 192.168.52.12
+  haproxy_db:
+    - name: prod-siwapp-haproxy-db-1
+      ip: 192.168.55.6
+  db:
+    - name: prod-siwapp-db-1
+      ip: 192.168.53.8
+    - name: prod-siwapp-db-2
+      ip: 192.168.53.9
+    - name: prod-siwapp-db-3
+      ip: 192.168.53.10

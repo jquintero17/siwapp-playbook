@@ -1,0 +1,24 @@
+---
+# vcenter deployment vars
+vcenter: daf-vcenter7-01.insbu.lab
+vcenter_username: administrator@vsphere.local
+vcenter_password: Ins3965!
+naming_prefix: prod-
+
+# Only set if using deployment_type = 'static'
+address_dns_servers:
+- 192.168.51.50
+- 10.67.0.50
+
+address_search_domain: tme-daf.lab
+
+datacenter: daf
+#cluster: cluster01
+folder: siwapp-prod
+template: ansible-centos-template
+datastore: fch2036v2fr.sjc15-174.insbu.net-datastore2
+app_network: tme-daf-ecomm-app-tier
+db_network: tme-daf-ecomm-db-tier
+haproxy_app_network: tme-daf-ecomm-front-end
+haproxy_db_network: tme-daf-ecomm-back-end
+loadsim_network: tme-daf-management
